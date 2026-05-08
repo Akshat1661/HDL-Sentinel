@@ -1,0 +1,85 @@
+config,config_label,id,type,prompt,outcome,pass_attempt,attempts,compile_errors,functional_fails
+full,Full Pipeline (3 corrections),gate_and,gate,design a 2-input AND gate,pass,1,1,0,0
+full,Full Pipeline (3 corrections),gate_or,gate,design a 2-input OR gate,pass,1,1,0,0
+full,Full Pipeline (3 corrections),gate_xor,gate,design a 2-input XOR gate,pass,1,1,0,0
+full,Full Pipeline (3 corrections),gate_nand,gate,design a 2-input NAND gate,pass,1,1,0,0
+full,Full Pipeline (3 corrections),mux_2to1,mux,design a 2-to-1 multiplexer,pass,1,1,0,0
+full,Full Pipeline (3 corrections),mux_4to1,mux,design a 4-to-1 multiplexer with 2-bit select,pass,4,4,2,1
+full,Full Pipeline (3 corrections),decoder_2to4,decoder,design a 2-to-4 decoder with enable,pass,2,2,0,1
+full,Full Pipeline (3 corrections),encoder_4to2,encoder,design a 4-to-2 priority encoder,pass,1,1,0,0
+full,Full Pipeline (3 corrections),half_adder,adder,design a half adder,pass,1,1,0,0
+full,Full Pipeline (3 corrections),full_adder,adder,design a full adder with carry in and carry out,pass,1,1,0,0
+full,Full Pipeline (3 corrections),adder_4bit,adder,design a 4-bit ripple carry adder,pass,1,1,0,0
+full,Full Pipeline (3 corrections),comparator_4bit,combinational,"design a 4-bit magnitude comparator with equal, greater-than, and less-than outputs",pass,1,1,0,0
+full,Full Pipeline (3 corrections),dff_sync,dff,design a D flip-flop with synchronous reset,pass,1,1,0,0
+full,Full Pipeline (3 corrections),tff,tff,design a T flip-flop with synchronous reset,fail,0,4,0,4
+full,Full Pipeline (3 corrections),jkff,jkff,design a JK flip-flop with synchronous reset,pass,1,1,0,0
+full,Full Pipeline (3 corrections),counter_4bit,counter,design a 4-bit binary up counter with enable and synchronous reset,pass,1,1,0,0
+full,Full Pipeline (3 corrections),counter_down3,counter,design a 3-bit binary down counter with synchronous reset,pass,1,1,0,0
+full,Full Pipeline (3 corrections),counter_mod6,counter,design a modulo-6 counter with synchronous reset that counts 0 to 5,fail,0,4,0,4
+full,Full Pipeline (3 corrections),counter_bcd,counter,design a BCD counter that counts from 0 to 9 and resets with synchronous reset,fail,0,4,0,4
+full,Full Pipeline (3 corrections),shift_sipo,shift_reg,design a 4-bit serial-in parallel-out shift register with synchronous reset,fail,0,4,0,4
+full,Full Pipeline (3 corrections),shift_piso,shift_reg,design an 8-bit parallel-in serial-out shift register with load and shift control,pass,3,3,1,1
+full,Full Pipeline (3 corrections),fsm_traffic,fsm,"design a traffic light FSM with three states: red, green, yellow, each lasting 3 clock cycles",fail,0,4,0,4
+full,Full Pipeline (3 corrections),fsm_seq_det,fsm,design a Mealy sequence detector FSM that detects the bit sequence 1011,fail,0,4,0,4
+full,Full Pipeline (3 corrections),alu_4bit,alu,"design a 4-bit ALU with 2-bit opcode supporting add, subtract, AND, OR operations",pass,1,1,0,0
+full,Full Pipeline (3 corrections),lfsr_4bit,lfsr,design a 4-bit Fibonacci LFSR with synchronous reset and taps at bits 3 and 2,fail,0,4,0,4
+full,Full Pipeline (3 corrections),johnson_4bit,johnson,design a 4-bit Johnson counter with synchronous reset,fail,0,4,0,4
+full,Full Pipeline (3 corrections),fifo_sync,fifo,design a synchronous FIFO with 8 entries and 8-bit data width with full and empty flags,fail,0,4,0,4
+full,Full Pipeline (3 corrections),uart_tx,uart,"design a UART transmitter with 8 data bits, 1 stop bit, no parity, and a parameter for clock divider",extraction_fail,0,1,0,0
+no_corr,No Corrections (1 attempt only),gate_and,gate,design a 2-input AND gate,pass,1,1,0,0
+no_corr,No Corrections (1 attempt only),gate_or,gate,design a 2-input OR gate,pass,1,1,0,0
+no_corr,No Corrections (1 attempt only),gate_xor,gate,design a 2-input XOR gate,pass,1,1,0,0
+no_corr,No Corrections (1 attempt only),gate_nand,gate,design a 2-input NAND gate,pass,1,1,0,0
+no_corr,No Corrections (1 attempt only),mux_2to1,mux,design a 2-to-1 multiplexer,pass,1,1,0,0
+no_corr,No Corrections (1 attempt only),mux_4to1,mux,design a 4-to-1 multiplexer with 2-bit select,pass,1,1,0,0
+no_corr,No Corrections (1 attempt only),decoder_2to4,decoder,design a 2-to-4 decoder with enable,pass,1,1,0,0
+no_corr,No Corrections (1 attempt only),encoder_4to2,encoder,design a 4-to-2 priority encoder,pass,1,1,0,0
+no_corr,No Corrections (1 attempt only),half_adder,adder,design a half adder,pass,1,1,0,0
+no_corr,No Corrections (1 attempt only),full_adder,adder,design a full adder with carry in and carry out,pass,1,1,0,0
+no_corr,No Corrections (1 attempt only),adder_4bit,adder,design a 4-bit ripple carry adder,pass,1,1,0,0
+no_corr,No Corrections (1 attempt only),comparator_4bit,combinational,"design a 4-bit magnitude comparator with equal, greater-than, and less-than outputs",pass,1,1,0,0
+no_corr,No Corrections (1 attempt only),dff_sync,dff,design a D flip-flop with synchronous reset,fail,0,1,0,1
+no_corr,No Corrections (1 attempt only),tff,tff,design a T flip-flop with synchronous reset,fail,0,1,0,1
+no_corr,No Corrections (1 attempt only),jkff,jkff,design a JK flip-flop with synchronous reset,pass,1,1,0,0
+no_corr,No Corrections (1 attempt only),counter_4bit,counter,design a 4-bit binary up counter with enable and synchronous reset,fail,0,1,0,1
+no_corr,No Corrections (1 attempt only),counter_down3,counter,design a 3-bit binary down counter with synchronous reset,fail,0,1,0,1
+no_corr,No Corrections (1 attempt only),counter_mod6,counter,design a modulo-6 counter with synchronous reset that counts 0 to 5,fail,0,1,0,1
+no_corr,No Corrections (1 attempt only),counter_bcd,counter,design a BCD counter that counts from 0 to 9 and resets with synchronous reset,fail,0,1,0,1
+no_corr,No Corrections (1 attempt only),shift_sipo,shift_reg,design a 4-bit serial-in parallel-out shift register with synchronous reset,fail,0,1,0,1
+no_corr,No Corrections (1 attempt only),shift_piso,shift_reg,design an 8-bit parallel-in serial-out shift register with load and shift control,fail,0,1,0,1
+no_corr,No Corrections (1 attempt only),fsm_traffic,fsm,"design a traffic light FSM with three states: red, green, yellow, each lasting 3 clock cycles",pass,1,1,0,0
+no_corr,No Corrections (1 attempt only),fsm_seq_det,fsm,design a Mealy sequence detector FSM that detects the bit sequence 1011,fail,0,1,0,1
+no_corr,No Corrections (1 attempt only),alu_4bit,alu,"design a 4-bit ALU with 2-bit opcode supporting add, subtract, AND, OR operations",pass,1,1,0,0
+no_corr,No Corrections (1 attempt only),lfsr_4bit,lfsr,design a 4-bit Fibonacci LFSR with synchronous reset and taps at bits 3 and 2,fail,0,1,0,1
+no_corr,No Corrections (1 attempt only),johnson_4bit,johnson,design a 4-bit Johnson counter with synchronous reset,fail,0,1,0,1
+no_corr,No Corrections (1 attempt only),fifo_sync,fifo,design a synchronous FIFO with 8 entries and 8-bit data width with full and empty flags,fail,0,1,0,1
+no_corr,No Corrections (1 attempt only),uart_tx,uart,"design a UART transmitter with 8 data bits, 1 stop bit, no parity, and a parameter for clock divider",fail,0,1,0,1
+one_corr,1 Correction (2 attempts),gate_and,gate,design a 2-input AND gate,pass,1,1,0,0
+one_corr,1 Correction (2 attempts),gate_or,gate,design a 2-input OR gate,pass,1,1,0,0
+one_corr,1 Correction (2 attempts),gate_xor,gate,design a 2-input XOR gate,pass,1,1,0,0
+one_corr,1 Correction (2 attempts),gate_nand,gate,design a 2-input NAND gate,pass,1,1,0,0
+one_corr,1 Correction (2 attempts),mux_2to1,mux,design a 2-to-1 multiplexer,pass,1,1,0,0
+one_corr,1 Correction (2 attempts),mux_4to1,mux,design a 4-to-1 multiplexer with 2-bit select,fail,0,2,0,2
+one_corr,1 Correction (2 attempts),decoder_2to4,decoder,design a 2-to-4 decoder with enable,pass,1,1,0,0
+one_corr,1 Correction (2 attempts),encoder_4to2,encoder,design a 4-to-2 priority encoder,pass,1,1,0,0
+one_corr,1 Correction (2 attempts),half_adder,adder,design a half adder,pass,1,1,0,0
+one_corr,1 Correction (2 attempts),full_adder,adder,design a full adder with carry in and carry out,pass,1,1,0,0
+one_corr,1 Correction (2 attempts),adder_4bit,adder,design a 4-bit ripple carry adder,pass,1,1,0,0
+one_corr,1 Correction (2 attempts),comparator_4bit,combinational,"design a 4-bit magnitude comparator with equal, greater-than, and less-than outputs",pass,1,1,0,0
+one_corr,1 Correction (2 attempts),dff_sync,dff,design a D flip-flop with synchronous reset,fail,0,2,0,2
+one_corr,1 Correction (2 attempts),tff,tff,design a T flip-flop with synchronous reset,pass,1,1,0,0
+one_corr,1 Correction (2 attempts),jkff,jkff,design a JK flip-flop with synchronous reset,pass,1,1,0,0
+one_corr,1 Correction (2 attempts),counter_4bit,counter,design a 4-bit binary up counter with enable and synchronous reset,fail,0,2,0,2
+one_corr,1 Correction (2 attempts),counter_down3,counter,design a 3-bit binary down counter with synchronous reset,fail,0,2,0,2
+one_corr,1 Correction (2 attempts),counter_mod6,counter,design a modulo-6 counter with synchronous reset that counts 0 to 5,fail,0,2,0,2
+one_corr,1 Correction (2 attempts),counter_bcd,counter,design a BCD counter that counts from 0 to 9 and resets with synchronous reset,fail,0,2,0,2
+one_corr,1 Correction (2 attempts),shift_sipo,shift_reg,design a 4-bit serial-in parallel-out shift register with synchronous reset,fail,0,2,0,2
+one_corr,1 Correction (2 attempts),shift_piso,shift_reg,design an 8-bit parallel-in serial-out shift register with load and shift control,pass,2,2,1,0
+one_corr,1 Correction (2 attempts),fsm_traffic,fsm,"design a traffic light FSM with three states: red, green, yellow, each lasting 3 clock cycles",fail,0,2,1,1
+one_corr,1 Correction (2 attempts),fsm_seq_det,fsm,design a Mealy sequence detector FSM that detects the bit sequence 1011,fail,0,2,0,2
+one_corr,1 Correction (2 attempts),alu_4bit,alu,"design a 4-bit ALU with 2-bit opcode supporting add, subtract, AND, OR operations",pass,1,1,0,0
+one_corr,1 Correction (2 attempts),lfsr_4bit,lfsr,design a 4-bit Fibonacci LFSR with synchronous reset and taps at bits 3 and 2,fail,0,2,0,2
+one_corr,1 Correction (2 attempts),johnson_4bit,johnson,design a 4-bit Johnson counter with synchronous reset,fail,0,2,0,2
+one_corr,1 Correction (2 attempts),fifo_sync,fifo,design a synchronous FIFO with 8 entries and 8-bit data width with full and empty flags,pass,2,2,0,1
+one_corr,1 Correction (2 attempts),uart_tx,uart,"design a UART transmitter with 8 data bits, 1 stop bit, no parity, and a parameter for clock divider",fail,0,2,0,2
