@@ -1655,6 +1655,8 @@ def main():
                     if cc2.form_submit_button("Sign Up"):
                         if not email or not password:
                             st.error("Email and password required.")
+                        elif not email.endswith(("@csu.fullerton.edu", "@fullerton.edu")):
+                            st.error("Sign-up is restricted to CSUF email addresses (@csu.fullerton.edu or @fullerton.edu).")
                         elif len(password) < 6:
                             st.error("Password must be 6+ characters.")
                         elif FIREBASE_WEB_API_KEY:
