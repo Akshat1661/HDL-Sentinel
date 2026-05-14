@@ -51,6 +51,17 @@ COLLECTION_NAME         = "verilog_pdf_chunks"
 CODE_RAG_COLLECTION     = "verilog_code_examples"
 BUILTIN_COLLECTION      = "builtin_verilog_examples"
 
+# Optional: load .env file for local development (never committed).
+# In production (HF Spaces), env vars come from the Space's secrets panel.
+try:
+    from dotenv import load_dotenv
+    _env_path = os.path.join(SCRIPT_DIR, ".env")
+    if os.path.exists(_env_path):
+        load_dotenv(_env_path)
+        print("[Config] Loaded .env file for local development")
+except ImportError:
+    pass  # python-dotenv is optional; silently skip if not installed
+
 # --- Secrets: env vars -> streamlit secrets -> local fallback ---
 def _load_env(key: str, fallback: str = "") -> str:
     v = os.environ.get(key, "").strip()
@@ -62,9 +73,8 @@ def _load_env(key: str, fallback: str = "") -> str:
         v = ""
     return v or fallback
 
-VLLM_BASE_URL   = _load_env("VLLM_BASE_URL", "http://3.148.67.20/v1")
-VLLM_API_KEY    = _load_env("VLLM_API_KEY",
-                             "b177bf9dcf72131d2ce9eaf0eba1d23cb3036af13e290dc9719f0ceaa9f382f6")
+VLLM_BASE_URL   = _load_env("VLLM_BASE_URL", "")
+VLLM_API_KEY    = _load_env("VLLM_API_KEY", "")
 VERBOSE_DEBUG   = bool(_load_env("VERBOSE_DEBUG", ""))
 
 # LLM BACKEND SELECTION
@@ -121,7 +131,11 @@ CODE_SYSTEM_PROMPT = (
     "4. A heading '#### Testbench Code' followed by ONE ```verilog code block "
     "containing a self-checking testbench that prints 'TB_PASS' on success and "
     "'TB_FAIL: <reason>' on any assertion failure.\n"
-    "5. A brief 'How it works' paragraph.\n\n"
+    "5. A 'How it works' paragraph (2-4 sentences) explaining the design's operation — "
+    "ALWAYS include this section; it helps students understand the design.\n\n"
+    "FENCE RULES:\n"
+    "- Both code blocks MUST be fenced with ```verilog ... ``` (not bare ```). "
+    "This is required for proper rendering.\n\n"
     "ABSOLUTE RULES — violations cause compilation failure:\n"
     "- The FIRST ```verilog block is the DESIGN, the SECOND is the TESTBENCH. "
     "Do not swap them.\n"
@@ -246,34 +260,8 @@ BUILTIN_EXAMPLES = [
 # INITIALIZATION (cached)
 # =============================================================================
 @st.cache_resource
-def _download_hf_data():
-    """On HF Spaces: download data files from private dataset repo if missing."""
-    if not os.environ.get("SPACE_ID"):
-        return
-    needs = not (
-        os.path.isdir(EMBEDDING_MODEL_PATH)
-        and os.path.isdir(CHROMA_DB_PATH)
-        and os.path.isdir(CODE_RAG_DB_PATH)
-    )
-    if not needs:
-        return
-    try:
-        from huggingface_hub import snapshot_download
-        snapshot_download(
-            repo_id=os.environ.get("HF_DATASET_REPO", "Akshat1661/hdl-sentinel-data"),
-            repo_type="dataset",
-            local_dir=SCRIPT_DIR,
-            token=os.environ.get("HF_TOKEN") or None,
-        )
-        print("[HF] Data files downloaded successfully.")
-    except Exception as e:
-        print(f"[HF] Data download failed: {e}")
-
-
-@st.cache_resource
 def initialize_resources():
     """Load Firebase, embedding model, ChromaDBs, LLM client. Cached — runs once."""
-    _download_hf_data()
     resources = {
         "firebase_db": None,
         "embedding_model": None,
@@ -961,7 +949,7 @@ def generate_code_response(llm_client, query, code_examples, theory_docs, contai
     full_response = call_llm(llm_client, messages, max_out)
 
     if full_response == "__AUTH_ERROR__":
-        return "**API authentication error.** Check that `VLLM_API_KEY` is set correctly."
+        return "**API authentication error.** The LLM backend could not authenticate. Please contact the administrator."
     if full_response is None:
         return "**Model communication error.** Please try again in a moment."
 
@@ -1050,17 +1038,25 @@ def generate_code_response(llm_client, query, code_examples, theory_docs, contai
 
 def _format_response(original_response, design_code, tb_code, verified=True, note=""):
     """Preserve the model's prose + swap in the final (possibly corrected) code."""
-    # Extract prose before the first code block
-    prose_match = re.match(r'^(.*?)(?=#{1,4}\s*Design Module|```verilog)',
+    # Extract prose BEFORE the first code block (intro + approach bullets)
+    prose_match = re.match(r'^(.*?)(?=#{1,4}\s*Design Module|```(?:verilog)?)',
                            original_response, re.DOTALL)
     prose = prose_match.group(1).strip() if prose_match else ""
-    # Extract "how it works" section if present
+    # Strip any stray "Tip:" line that may have leaked into prose from a previous run
+    prose = re.sub(r'(?im)^\s*Tip:.*$', '', prose).strip()
+    # Strip empty scaffolding headings in prose
+    prose = re.sub(r'(?im)^#{1,4}\s*(Design Module|Testbench Code)\s*$', '', prose).strip()
+    prose = re.sub(r'\n{3,}', '\n\n', prose).strip()
+
+    # Extract "how it works" section if present (between "How it works" and next heading/end)
     howit_match = re.search(r'(#{1,4}\s*How it works.*?)(?=#{1,4}|\Z)',
                             original_response, re.DOTALL | re.IGNORECASE)
     if not howit_match:
-        howit_match = re.search(r'(How it works.*?)(?=#{1,4}|\Z)',
+        howit_match = re.search(r'(\bHow it works\b.*?)(?=\n#{1,4}|\Z)',
                                 original_response, re.DOTALL | re.IGNORECASE)
     howit = howit_match.group(1).strip() if howit_match else ""
+    # Remove any code blocks that accidentally got included in howit
+    howit = re.sub(r'```[^\n]*\n.*?```', '', howit, flags=re.DOTALL).strip()
 
     parts = []
     if prose:
@@ -1109,37 +1105,56 @@ def render_message(msg):
     """Render a chat message with code blocks extracted and placed inline."""
     with st.chat_message(msg["role"]):
         content = msg["content"]
+        # Detect ```verilog blocks first, fall back to plain ``` blocks
         blocks = re.findall(r'```verilog\s*\n(.*?)```', content, re.DOTALL)
+        if not blocks:
+            # Fall back: any ``` fence (gpt-4o-mini sometimes omits 'verilog' tag)
+            blocks = re.findall(r'```[^\n]*\n(.*?)```', content, re.DOTALL)
+            # Filter out non-Verilog-looking blocks (no 'module' keyword)
+            blocks = [b for b in blocks if 'module' in b]
         if not blocks:
             st.markdown(content)
             return
 
-        # Prose before first block
-        prose = re.sub(r'```verilog\s*\n.*?```', '', content, flags=re.DOTALL).strip()
-        # Also strip "Design Module" / "Testbench Code" heading lines that are now bare
+        # Strip code blocks from content to get prose
+        prose = re.sub(r'```[^\n]*\n.*?```', '', content, flags=re.DOTALL).strip()
+        # Strip scaffolding headings
         prose = re.sub(r'^#{1,4}\s*Design Module.*$', '', prose, flags=re.MULTILINE)
         prose = re.sub(r'^#{1,4}\s*Testbench Code.*$', '', prose, flags=re.MULTILINE)
-        # Clean up extra blank lines
+        # Move "Tip:" line (from our own _format_response) to end — avoid it appearing first
+        tip_match = re.search(r'(?im)^(_?Tip:.*?_?)\s*$', prose)
+        tip_line = tip_match.group(1).strip() if tip_match else ""
+        if tip_line:
+            prose = prose.replace(tip_match.group(0), "").strip()
         prose = re.sub(r'\n{3,}', '\n\n', prose).strip()
 
-        # Find where design vs. other prose falls — split at "How it works"
+        # Find where design vs. "how it works" falls — split at "How it works"
         howit_split = re.split(r'(?:#{1,4}\s*)?How it works',
                                prose, maxsplit=1, flags=re.IGNORECASE)
         intro = howit_split[0].strip()
-        howit = ("How it works" + howit_split[1]).strip() if len(howit_split) > 1 else ""
+        howit = ("**How it works** " + howit_split[1]).strip() if len(howit_split) > 1 else ""
 
+        # Render in the correct order:
+        # 1. Intro / approach prose
         if intro:
             st.markdown(intro)
 
+        # 2. Design Module heading + code
         st.markdown("#### Design Module")
         st.code(blocks[0].strip(), language="verilog")
 
+        # 3. Testbench Code in expander
         if len(blocks) >= 2:
             with st.expander("Testbench Code"):
                 st.code(blocks[1].strip(), language="verilog")
 
+        # 4. How it works paragraph
         if howit:
             st.markdown(howit)
+
+        # 5. Tip / note at the bottom
+        if tip_line:
+            st.markdown(tip_line)
 
         # Simulator handoff
         if msg["role"] == "assistant" and len(blocks) >= 2:
@@ -1283,7 +1298,7 @@ def render_waveform_chart(vcd_bytes):
         height=max(280, len(names) * 52 + 80), hovermode="x unified",
     )
     fig.update_xaxes(rangeslider_visible=True, rangeslider_thickness=0.05)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 # =============================================================================
@@ -1317,9 +1332,7 @@ def inject_css():
 # =============================================================================
 def page_chat(db, llm_client, emb_model, theory_col, code_col, builtin_col):
     st.title("Verilog AI Assistant")
-    _model_label = (f"OpenAI {LLM_MODEL_NAME}" if USE_OPENAI_API
-                    else "Qwen2.5-Coder-32B (W4A16 SFT)")
-    st.caption(f"{_model_label} — self-verifying via Icarus Verilog")
+    st.caption("Self-verifying Verilog tutor via Icarus Verilog · RAG-augmented")
 
     c1, c2, c3 = st.columns(3)
     c1.metric("Cooldown", f"{COOLDOWN_SECONDS}s / request")
@@ -1463,7 +1476,7 @@ def page_simulator():
         if t is not None:
             st.session_state.testbench_code = t
 
-    if st.button("Run Simulation", type="primary", use_container_width=True):
+    if st.button("Run Simulation", type="primary", width="stretch"):
         with st.spinner("Compiling and simulating..."):
             sim = run_simulation(st.session_state.verilog_code,
                                  st.session_state.testbench_code)
@@ -1504,7 +1517,7 @@ def page_simulator():
             with dl:
                 st.download_button("Download .vcd", data=sim["vcd_data"],
                                    file_name="waveform.vcd", mime="text/plain",
-                                   use_container_width=True)
+                                   width="stretch")
             with info:
                 st.caption("Open in GTKWave or wavetrace.io for a full viewer. "
                            "Preview below.")
@@ -1530,8 +1543,12 @@ def main():
         if k not in st.session_state:
             st.session_state[k] = v
 
-    # Load resources
-    res = initialize_resources()
+    # Load resources — stored in session_state to avoid re-running on every Streamlit
+    # rerun. @st.cache_resource alone is not enough; session_state guards against
+    # cache misses from websocket reconnects/reruns that trigger re-init.
+    if "resources" not in st.session_state:
+        st.session_state.resources = initialize_resources()
+    res = st.session_state.resources
     db            = res["firebase_db"]
     llm_client    = res["llm_client"]
     emb_model     = res["embedding_model"]
@@ -1539,19 +1556,19 @@ def main():
     code_col      = res["code_rag_collection"]
     builtin_col   = res["builtin_collection"]
 
-    if not VLLM_API_KEY:
-        st.warning("VLLM_API_KEY not set. Code generation will fail until configured.", icon="⚠️")
+    # Only warn if NEITHER backend is configured
+    if not USE_OPENAI_API and not VLLM_API_KEY:
+        st.warning("No LLM backend configured. Set OPENAI_API_KEY (or VLLM_API_KEY) to enable code generation.", icon="⚠️")
 
     inject_css()
 
     # Sidebar
     with st.sidebar:
         st.title("Verilog AI")
-        st.caption("OpenAI API · verification loop" if USE_OPENAI_API
-                   else "Qwen2.5-Coder-32B · W4A16 SFT")
+        st.caption("RAG + verification loop")
         st.divider()
 
-        if st.button("+ New Chat", use_container_width=True, type="primary"):
+        if st.button("+ New Chat", width="stretch", type="primary"):
             st.session_state.active_chat_id = None
             st.session_state.messages = []
             st.rerun()
@@ -1563,8 +1580,12 @@ def main():
         with st.expander("Account", expanded=not st.session_state.user_info):
             if st.session_state.user_info:
                 st.success(f"Signed in as {st.session_state.user_info.get('email')}")
-                if st.button("Sign Out", use_container_width=True):
-                    st.session_state.clear()
+                if st.button("Sign Out", width="stretch"):
+                    # Only clear auth/chat state — preserve cached resources
+                    for key in ["user_info", "active_chat_id", "messages",
+                                "chat_sessions", "pending_title"]:
+                        if key in st.session_state:
+                            del st.session_state[key]
                     st.rerun()
             else:
                 # Email + password auth via Firebase REST API (verifies password).
@@ -1627,13 +1648,13 @@ def main():
             for s in st.session_state.chat_sessions:
                 cc1, cc2 = st.columns([5, 1])
                 with cc1:
-                    if st.button(s["title"], key=f"sel_{s['id']}", use_container_width=True):
+                    if st.button(s["title"], key=f"sel_{s['id']}", width="stretch"):
                         st.session_state.active_chat_id = s["id"]
                         st.session_state.messages = load_messages(
                             db, st.session_state.user_info['uid'], s["id"])
                         st.rerun()
                 with cc2:
-                    if st.button("x", key=f"del_{s['id']}", use_container_width=True):
+                    if st.button("x", key=f"del_{s['id']}", width="stretch"):
                         delete_chat(db, st.session_state.user_info['uid'], s["id"])
                         if st.session_state.active_chat_id == s["id"]:
                             st.session_state.active_chat_id = None
