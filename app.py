@@ -936,7 +936,26 @@ def estimate_tokens(text: str) -> int:
 # =============================================================================
 # GENERATION PIPELINE
 # =============================================================================
-def generate_code_response(llm_client, query, code_examples, theory_docs, container):
+def _build_history(messages: list, n_pairs: int = 2) -> list:
+    """Return last n_pairs Q&A turns as LLM message dicts (truncated for cost)."""
+    history = []
+    i = len(messages) - 1
+    found = 0
+    while i >= 1 and found < n_pairs:
+        if messages[i]["role"] == "assistant" and messages[i - 1]["role"] == "user":
+            history.insert(0, {"role": "assistant",
+                                "content": messages[i]["content"][:2000]})
+            history.insert(0, {"role": "user",
+                                "content": messages[i - 1]["content"][:500]})
+            found += 1
+            i -= 2
+        else:
+            i -= 1
+    return history
+
+
+def generate_code_response(llm_client, query, code_examples, theory_docs, container,
+                           history=None):
     """Single-pass code generation with iverilog correction loop.
 
     Returns the formatted assistant response as markdown string.
@@ -962,10 +981,11 @@ def generate_code_response(llm_client, query, code_examples, theory_docs, contai
 
     user_content = f"{context}Request: {query}"
 
-    messages = [
-        {"role": "system", "content": CODE_SYSTEM_PROMPT},
-        {"role": "user", "content": user_content},
-    ]
+    messages = (
+        [{"role": "system", "content": CODE_SYSTEM_PROMPT}]
+        + (history or [])
+        + [{"role": "user", "content": user_content}]
+    )
 
     input_tokens = sum(estimate_tokens(m["content"]) for m in messages)
     max_out = max(min(MAX_COMPLETION_TOKENS,
@@ -1101,16 +1121,17 @@ def _format_response(original_response, design_code, tb_code, verified=True, not
     return "\n\n".join(parts)
 
 
-def generate_concept_response(llm_client, query, theory_docs, container):
+def generate_concept_response(llm_client, query, theory_docs, container, history=None):
     """Theory/concept question — single call, no code verification."""
     context = ""
     if theory_docs:
         context = "[Reference]\n" + "\n\n".join(theory_docs[:2])[:MAX_CONTEXT_CHARS] + "\n\n"
 
-    messages = [
-        {"role": "system", "content": CONCEPT_SYSTEM_PROMPT},
-        {"role": "user", "content": f"{context}{query}"},
-    ]
+    messages = (
+        [{"role": "system", "content": CONCEPT_SYSTEM_PROMPT}]
+        + (history or [])
+        + [{"role": "user", "content": f"{context}{query}"}]
+    )
     input_tokens = sum(estimate_tokens(m["content"]) for m in messages)
     max_out = max(min(MAX_COMPLETION_TOKENS,
                       VLLM_MAX_CONTEXT - input_tokens - TOKEN_SAFETY_MARGIN), 300)
@@ -1463,16 +1484,19 @@ def page_chat(db, llm_client, emb_model, theory_col, code_col, builtin_col):
                 theory_docs = []
                 if q_emb is not None:
                     theory_docs, _ = retrieve_theory(theory_col, q_emb, k=1)
+                history = _build_history(st.session_state.messages)
                 response = generate_code_response(
-                    llm_client, query, code_examples, theory_docs, container
+                    llm_client, query, code_examples, theory_docs, container,
+                    history=history
                 )
             else:
                 # Concept mode
                 theory_docs = []
                 if q_emb is not None:
                     theory_docs, _ = retrieve_theory(theory_col, q_emb, k=2)
+                history = _build_history(st.session_state.messages)
                 response = generate_concept_response(
-                    llm_client, query, theory_docs, container
+                    llm_client, query, theory_docs, container, history=history
                 )
             container.empty()
             render_message({"role": "assistant", "content": response})
@@ -1511,6 +1535,10 @@ def page_simulator():
             st.session_state.testbench_code = t
 
     if st.button("Run Simulation", type="primary", width="stretch"):
+        combined = (st.session_state.verilog_code + st.session_state.testbench_code).lower()
+        if "$system" in combined or "`include" in combined:
+            st.error("Disallowed construct detected ($system / `include). Remove it and try again.")
+            st.stop()
         with st.spinner("Compiling and simulating..."):
             sim = run_simulation(st.session_state.verilog_code,
                                  st.session_state.testbench_code)
