@@ -246,8 +246,34 @@ BUILTIN_EXAMPLES = [
 # INITIALIZATION (cached)
 # =============================================================================
 @st.cache_resource
+def _download_hf_data():
+    """On HF Spaces: download data files from private dataset repo if missing."""
+    if not os.environ.get("SPACE_ID"):
+        return
+    needs = not (
+        os.path.isdir(EMBEDDING_MODEL_PATH)
+        and os.path.isdir(CHROMA_DB_PATH)
+        and os.path.isdir(CODE_RAG_DB_PATH)
+    )
+    if not needs:
+        return
+    try:
+        from huggingface_hub import snapshot_download
+        snapshot_download(
+            repo_id=os.environ.get("HF_DATASET_REPO", "Akshat1661/hdl-sentinel-data"),
+            repo_type="dataset",
+            local_dir=SCRIPT_DIR,
+            token=os.environ.get("HF_TOKEN") or None,
+        )
+        print("[HF] Data files downloaded successfully.")
+    except Exception as e:
+        print(f"[HF] Data download failed: {e}")
+
+
+@st.cache_resource
 def initialize_resources():
     """Load Firebase, embedding model, ChromaDBs, LLM client. Cached — runs once."""
+    _download_hf_data()
     resources = {
         "firebase_db": None,
         "embedding_model": None,
