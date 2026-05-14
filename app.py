@@ -21,6 +21,7 @@ import re
 import json
 import uuid
 import time
+import datetime
 import subprocess
 import tempfile
 
@@ -117,6 +118,7 @@ FAIL_MARKERS            = ["TB_FAIL", "MISMATCH", "ASSERTION FAILED"]
 # --- UI Rate Limit ---
 COOLDOWN_SECONDS        = 15
 MAX_PROMPT_CHARS        = 1000
+DAILY_REQUEST_LIMIT     = 30
 
 
 # =============================================================================
@@ -881,6 +883,30 @@ def is_complete_module(code: str) -> bool:
 # =============================================================================
 # LLM API CALL
 # =============================================================================
+def check_and_increment_daily_usage(db, uid: str):
+    """Returns (allowed, daily_count). Blocks if user exceeds DAILY_REQUEST_LIMIT."""
+    if db is None:
+        return True, 0
+    today = datetime.date.today().isoformat()
+    ref = db.collection("usage").document(uid)
+    doc = ref.get()
+    if doc.exists:
+        data = doc.to_dict()
+        if data.get("date") == today:
+            count = data.get("daily_count", 0)
+            if count >= DAILY_REQUEST_LIMIT:
+                return False, count
+            ref.update({"daily_count": firestore.Increment(1),
+                        "total_count": firestore.Increment(1)})
+            return True, count + 1
+        else:
+            ref.update({"date": today, "daily_count": 1,
+                        "total_count": firestore.Increment(1)})
+            return True, 1
+    ref.set({"date": today, "daily_count": 1, "total_count": 1})
+    return True, 1
+
+
 def call_llm(client, messages, max_tokens):
     """Single LLM call with rate-limit backoff. Returns string or None."""
     for attempt in range(4):
@@ -1354,6 +1380,14 @@ def page_chat(db, llm_client, emb_model, theory_col, code_col, builtin_col):
             st.error(f"Request too long ({len(query)} chars). Limit: {MAX_PROMPT_CHARS}.")
             st.stop()
         st.session_state.last_message_time = now
+
+        # Per-user daily cap (tracked in Firestore)
+        uid = (st.session_state.user_info or {}).get("uid")
+        if uid:
+            allowed, count = check_and_increment_daily_usage(db, uid)
+            if not allowed:
+                st.error(f"Daily limit of {DAILY_REQUEST_LIMIT} requests reached. Try again tomorrow.")
+                st.stop()
 
         # Append user message
         st.session_state.messages.append({"role": "user", "content": query})
