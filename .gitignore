@@ -1,4 +1,5 @@
-# Secrets — safe in PRIVATE repo only
+# Secrets — use HF Space secrets / env vars instead
+firebase_service_account.json
 .env
 *.env
 
