@@ -1484,7 +1484,7 @@ def page_chat(db, llm_client, emb_model, theory_col, code_col, builtin_col):
                 theory_docs = []
                 if q_emb is not None:
                     theory_docs, _ = retrieve_theory(theory_col, q_emb, k=1)
-                history = _build_history(st.session_state.messages)
+                history = _build_history(st.session_state.messages, n_pairs=1)
                 response = generate_code_response(
                     llm_client, query, code_examples, theory_docs, container,
                     history=history
@@ -1494,7 +1494,7 @@ def page_chat(db, llm_client, emb_model, theory_col, code_col, builtin_col):
                 theory_docs = []
                 if q_emb is not None:
                     theory_docs, _ = retrieve_theory(theory_col, q_emb, k=2)
-                history = _build_history(st.session_state.messages)
+                history = _build_history(st.session_state.messages, n_pairs=1)
                 response = generate_concept_response(
                     llm_client, query, theory_docs, container, history=history
                 )
