@@ -118,7 +118,7 @@ FAIL_MARKERS            = ["TB_FAIL", "MISMATCH", "ASSERTION FAILED"]
 # --- UI Rate Limit ---
 COOLDOWN_SECONDS        = 15
 MAX_PROMPT_CHARS        = 1000
-DAILY_REQUEST_LIMIT     = 30
+DAILY_REQUEST_LIMIT     = 20
 
 
 # =============================================================================
@@ -907,6 +907,30 @@ def check_and_increment_daily_usage(db, uid: str):
     return True, 1
 
 
+def get_daily_usage(db, uid: str) -> int:
+    """Returns how many requests the user has made today (read-only)."""
+    if db is None:
+        return 0
+    today = datetime.date.today().isoformat()
+    doc = db.collection("usage").document(uid).get()
+    if doc.exists:
+        data = doc.to_dict()
+        if data.get("date") == today:
+            return data.get("daily_count", 0)
+    return 0
+
+
+def _midnight_reset_str() -> str:
+    now = datetime.datetime.now()
+    midnight = (now + datetime.timedelta(days=1)).replace(
+        hour=0, minute=0, second=0, microsecond=0)
+    delta = midnight - now
+    h, m = divmod(delta.seconds // 60, 60)
+    if h > 0:
+        return f"resets in {h}h {m}m"
+    return f"resets in {m}m"
+
+
 def call_llm(client, messages, max_tokens):
     """Single LLM call with rate-limit backoff. Returns string or None."""
     for attempt in range(4):
@@ -1381,10 +1405,16 @@ def page_chat(db, llm_client, emb_model, theory_col, code_col, builtin_col):
     st.title("Verilog AI Assistant")
     st.caption("Self-verifying Verilog tutor via Icarus Verilog · RAG-augmented")
 
-    c1, c2, c3 = st.columns(3)
+    uid = (st.session_state.user_info or {}).get("uid")
+    used_today = get_daily_usage(db, uid) if uid else 0
+    remaining = max(0, DAILY_REQUEST_LIMIT - used_today)
+
+    c1, c2, c3, c4 = st.columns(4)
     c1.metric("Cooldown", f"{COOLDOWN_SECONDS}s / request")
     c2.metric("Max Prompt", f"{MAX_PROMPT_CHARS} chars")
     c3.metric("Correction", f"{MAX_CORRECTION_ATTEMPTS} attempts")
+    c4.metric("Queries Left Today", f"{remaining} / {DAILY_REQUEST_LIMIT}",
+              help=f"Limit resets at midnight — {_midnight_reset_str()}")
     st.divider()
 
     for msg in st.session_state.messages:
@@ -1407,7 +1437,8 @@ def page_chat(db, llm_client, emb_model, theory_col, code_col, builtin_col):
         if uid:
             allowed, count = check_and_increment_daily_usage(db, uid)
             if not allowed:
-                st.error(f"Daily limit of {DAILY_REQUEST_LIMIT} requests reached. Try again tomorrow.")
+                st.error(f"Daily limit of {DAILY_REQUEST_LIMIT} queries reached. "
+                         f"Limit resets at midnight — {_midnight_reset_str()}.")
                 st.stop()
 
         # Append user message
