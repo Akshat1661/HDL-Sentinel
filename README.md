@@ -4,10 +4,6 @@ HDL Sentinel is a self-verifying Verilog RTL design tutor built for M.S. Compute
 
 It generates synthesizable Verilog modules and testbenches, compiles and simulates them with Icarus Verilog, and uses simulator feedback to correct generation errors. The goal is to close the loop between LLM-generated code and ground-truth hardware simulation.
 
-**Master's Thesis Project**  
-Akshat Desai · M.S. Computer Science · California State University, Fullerton  
-Advisors: Dr. Rakesh Mahto · Dr. Kiran George · Dr. Kenneth John Faller II
-
 ---
 
 ## Features
