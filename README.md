@@ -69,11 +69,11 @@ HDL-Sentinel/
 ├── requirements.txt
 ├── packages.txt
 ├── DEMO.md
-├── eval_results.json
-├── eval_results.csv
-├── eval_charts.png
-├── arch_slide.png
-├── hdl_sentinel_architecture.svg
+├── results/eval_results.json
+├── results/eval_results.csv
+├── docs/eval_charts.png
+├── docs/arch_slide.png
+├── docs/hdl_sentinel_architecture.svg
 ├── README.md
 └── .streamlit/
 ```
