@@ -1,50 +1,42 @@
-# Secrets — use HF Space secrets / env vars instead
-firebase_service_account.json
+# Secrets
 .env
 *.env
+firebase_service_account.json
+*.key
+credentials.json
+.streamlit/secrets.toml
 
 # Python
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+.venv/
+venv/
+env/
 
-# Local
-.streamlit/secrets.toml
+# IDE / local tools
 .claude/
 .vscode/
 .idea/
+.DS_Store
 
-# Datasets (too big for HF Spaces, we use pre-built ChromaDB instead)
-*.jsonl
-*.json.gz
-
-# Large binary assets — transfer via USB
+# Large local RAG/vector assets
 embedding_model/
 chroma_db_pdfs_only/
 chroma_db_code_examples/
-venv/
 
-# Build/backup files (keep build_code_rag.py)
-deployment_archive/*.docx
-deployment_archive/*.pdf
-deployment_archive/*.pptx
-deployment_archive/*.png
-deployment_archive/*.md
-deployment_archive/*.txt
-deployment_archive/upload.py
-deployment_archive/verilog_agent.py
-deployment_archive/extract_pdf.py
-deployment_archive/generate_timing_dpo.py
-deployment_archive/create_presentation.py
-deployment_archive/update_pptx.py
-deployment_archive/make_*.py
-deployment_archive/app2_*.py
-deployment_archive/app_before_*.py
-deployment_archive/app_broken*.py
-deployment_archive/*_backup.py
-deployment_archive/*.jsonl
-deployment_archive/*.vcd
+# Generated datasets / large training files
+*.jsonl
+*.json.gz
+*.vcd
+
+# Deployment/archive/private working files
+deployment_archive/
+
+# Backups / scratch files
 app2_*.py
 app_before_*.py
 app_broken*.py
 *_backup.py
+*.tmp
